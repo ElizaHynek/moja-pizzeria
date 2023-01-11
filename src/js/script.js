@@ -33,7 +33,7 @@
     },
   };
 
-  /*const classNames = {
+  const classNames = {
     menuProduct: {
       wrapperActive: 'active',
       imageVisible: 'active',
@@ -46,7 +46,7 @@
       defaultMin: 1,
       defaultMax: 9,
     }
-  }; */
+  }; 
 
   const templates = {
     menuProduct: Handlebars.compile(document.querySelector(select.templateOf.menuProduct).innerHTML),
@@ -60,9 +60,23 @@
       thisProduct.id = id;
       thisProduct.data = data;
 
-      thisProduct.renderInMenu();
+      console.log(data);
 
-      console.log('new Product', thisProduct);
+      thisProduct.renderInMenu();
+      thisProduct.getElements();
+      thisProduct.initAccordion();
+      thisProduct.initOrderForm();
+      thisProduct.processOrder();
+    }
+
+    getElements(){
+      const thisProduct = this;
+
+      thisProduct.accordionTrigger = thisProduct.element.querySelector(select.menuProduct.clickable);
+      thisProduct.form = thisProduct.element.querySelector(select.menuProduct.form);
+      thisProduct.formInputs = thisProduct.form.querySelectorAll(select.all.formInputs);
+      thisProduct.cartButton = thisProduct.element.querySelector(select.menuProduct.cartButton);
+      thisProduct.priceElem = thisProduct.element.querySelector(select.menuProduct.priceElem);
     }
 
     renderInMenu(){
@@ -75,13 +89,72 @@
       const menuContainer = document.querySelector(select.containerOf.menu);
       menuContainer.appendChild(thisProduct.element);
     }
+    
+    initAccordion(){
+      const thisProduct = this;
+      
+      thisProduct.accordionTrigger.addEventListener('click', function(event){
+        event.preventDefault();
+        const activeProduct = document.querySelector(classNames.menuProduct.wrapperActive);
+        if (activeProduct && activeProduct != thisProduct.element) {
+          activeProduct.classList.remove(classNames.menuProduct.wrapperActive);
+        } 
+        thisProduct.element.classList.toggle(classNames.menuProduct.wrapperActive);
+      });
+    }
+
+    initOrderForm(){
+      const thisProduct = this;
+
+      thisProduct.form.addEventListener('submit', function(event){
+        event.preventDefault();
+        thisProduct.processOrder();
+      });
+      for (let input of thisProduct.formInputs) {
+        input.addEventListener('change', function(){
+          thisProduct.processOrder();
+        });
+      }
+      thisProduct.cartButton.addEventListener('click', function(event){
+        event.preventDefault();
+        thisProduct.processOrder();
+      });
+    }
+
+    processOrder(){
+      const thisProduct = this;
+
+      const formData = utils.serializeFormToObject(thisProduct.form);
+      console.log('formData', formData);
+
+      let price = thisProduct.data.price;
+
+      for (let paramId in thisProduct.data.params){
+        const param = thisProduct.data.params[paramId];
+        for (let optionId in param.options){
+          const option = param.options[optionId];
+
+          if (formData[paramId] && formData[paramId].includes(optionId)) {
+            if (!option.default) {
+              price += option.price;
+            }
+          } else if (option.default) {
+            price -= option.price;
+            console.log('option.price', option.price);
+          }
+        } 
+      }
+
+      thisProduct.priceElem.innerHTML = price;
+      console.log(price);
+    }
   }
 
   
   const app = {
     initMenu: function(){
       const thisApp = this;
-      console.log('thisApp.data', dataSource);
+
       for (let productData in thisApp.data.products){
         new Product(productData, thisApp.data.products[productData]);
       }
@@ -89,7 +162,6 @@
     initData: function(){
       const thisApp = this;
       thisApp.data = dataSource; // obiektowi thisApp, czyli app nadajemy właściwośc data, która będzie referencją do naszych danych zapisanych jako dataSource (też obiekt z referencją do danych)
-      console.log('dataSource', dataSource);
     },
     init: function(){
       const thisApp = this;

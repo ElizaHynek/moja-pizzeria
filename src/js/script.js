@@ -76,6 +76,11 @@
     cart: {
       defaultDeliveryFee: 20,
     },
+    db: {
+      url: '//localhost:3131',
+      products: 'products',
+      orders: 'orders',
+    },    
     // CODE ADDED END
   };
    
@@ -340,6 +345,10 @@
       thisCart.dom.subtotalPrice = thisCart.dom.wrapper.querySelector(select.cart.subtotalPrice);
       thisCart.dom.totalPrice = thisCart.dom.wrapper.querySelectorAll(select.cart.totalPrice);
       thisCart.dom.totalNumber = thisCart.dom.wrapper.querySelector(select.cart.totalNumber);
+      thisCart.dom.form = thisCart.dom.wrapper.querySelector(select.cart.form);
+      thisCart.dom.formSubmit = thisCart.dom.wrapper.querySelector(select.cart.formSubmit);
+      thisCart.dom.phone = thisCart.dom.wrapper.querySelector(select.cart.phone);
+      thisCart.dom.address = thisCart.dom.wrapper.querySelector(select.cart.address);
     }
 
     initActions() {
@@ -354,6 +363,10 @@
       });
       thisCart.dom.productList.addEventListener('remove', function(event){
         thisCart.remove(event.detail.cartProduct);
+      });
+      thisCart.dom.form.addEventListener('submit', function(event){
+        event.preventDefault();
+        thisCart.sendOrder();
       });
     }
 
@@ -382,19 +395,19 @@
         thisCart.totalNumber += product.amount;
         thisCart.subtotalPrice += product.price;
       } 
-      if (thisCart.subtotalPrice != 0) {
+      if (thisCart.subtotalPrice !== 0) {
         thisCart.totalPrice = thisCart.subtotalPrice + deliveryFee;
-      } 
+      } else {
+        thisCart.totalPrice = 0;
+      }
       console.log(thisCart.totalNumber, thisCart.subtotalPrice, thisCart.totalPrice);
 
       thisCart.dom.totalNumber.innerHTML = thisCart.totalNumber;
       thisCart.dom.subtotalPrice.innerHTML = thisCart.subtotalPrice;
       thisCart.dom.deliveryFee.innerHTML = deliveryFee;
 
-      for (let price of thisCart.dom.totalPrice) {
-        if (thisCart.totalNumber !== 0) {
-          price.innerHTML = thisCart.totalPrice;
-        }
+      for (let price of thisCart.dom.totalPrice) {        
+        price.innerHTML = thisCart.totalPrice;      
       }
     }
 
@@ -405,6 +418,35 @@
       const removeProduct = thisCart.products.indexOf(event);
       thisCart.products.splice(removeProduct, 1);
       thisCart.update();
+    }
+
+    sendOrder(){
+      const thisCart = this;
+
+      const payload = {
+        address: thisCart.dom.address.value,
+        phone: thisCart.dom.phone.value,
+        totalPrice: thisCart.totalPrice,
+        subtotalPrice: thisCart.subtotalPrice,
+        totalNumber: thisCart.totalNumber,
+        deliveryFee: thisCart.dom.deliveryFee.innerHTML,
+        products: [],
+      };
+      
+      for (let prod of thisCart.products) {
+        payload.products.push(prod.getData());
+      }
+      
+      const url = settings.db.url + '/' + settings.db.orders;
+      const options = {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      };
+
+      fetch (url, options);
     }
   }
 
@@ -472,6 +514,21 @@
         thisCartProduct.remove();
       });
     }
+
+    getData(){
+      const thisCartProduct = this;
+      const productSummary = {
+        
+        id: thisCartProduct.id,
+        amount: thisCartProduct.amount,
+        price: thisCartProduct.price,
+        priceSingle: thisCartProduct.priceSingle,
+        name: thisCartProduct.name,
+        params: thisCartProduct.params,
+      };
+
+      return productSummary;
+    }
   }
   
   const app = {
@@ -479,12 +536,27 @@
       const thisApp = this;
 
       for (let productData in thisApp.data.products){
-        new Product(productData, thisApp.data.products[productData]);
+        new Product(thisApp.data.products[productData].id, thisApp.data.products[productData]);
       }
     },
     initData: function(){
       const thisApp = this;
-      thisApp.data = dataSource; // obiektowi thisApp, czyli app nadajemy właściwośc data, która będzie referencją do naszych danych zapisanych jako dataSource (też obiekt z referencją do danych)
+      //thisApp.data = dataSource; // obiektowi thisApp, czyli app nadajemy właściwośc data, która będzie referencją do naszych danych zapisanych jako dataSource (też obiekt z referencją do danych)
+      thisApp.data = {};
+      const url = settings.db.url + '/' + settings.db.products;
+
+
+      fetch(url)  //łączy za pomocą domyślnej metody GET z podanym adresem endpointa (wysyła request)
+        .then(function(rawResponse){  //konwertuje dane do obiektu JS
+          return rawResponse.json();
+        })
+        .then(function(parsedResponse){  //pokazuje skonwertowane dane
+          console.log('parsedResponse', parsedResponse);
+          thisApp.data.products = parsedResponse;
+          thisApp.initMenu();
+        });
+      
+      console.log('thisApp.data', JSON.stringify(thisApp.data));
     },
     initCart: function(){
       const thisApp = this;
@@ -495,7 +567,7 @@
     init: function(){
       const thisApp = this;
       thisApp.initData();
-      thisApp.initMenu();
+      //thisApp.initMenu();
       thisApp.initCart();
     },
   };

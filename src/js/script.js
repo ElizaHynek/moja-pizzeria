@@ -91,7 +91,7 @@
     // CODE ADDED END
   };
   
-
+  
 
   class Product {
     constructor(id, data){
@@ -119,7 +119,7 @@
       thisProduct.imageWrapper = thisProduct.element.querySelector(select.menuProduct.imageWrapper);
       // tutaj tworzymy właściwości dla AmountWidget, ponieważ to instancje klasy Product będą korzystały z tego widżeta, a nie sam widżet
       thisProduct.amountWidgetElem = thisProduct.element.querySelector(select.menuProduct.amountWidget);
-
+      thisProduct.orderAccordionTrigger = document.querySelector(select.cart.formSubmit);
     }
 
     renderInMenu(){
@@ -138,11 +138,20 @@
       
       thisProduct.accordionTrigger.addEventListener('click', function(event){
         event.preventDefault();
-        const activeProduct = document.querySelector(classNames.menuProduct.wrapperActive);
+        const activeProduct = document.querySelector(select.all.menuProductsActive);
         if (activeProduct && activeProduct != thisProduct.element) {
           activeProduct.classList.remove(classNames.menuProduct.wrapperActive);
         } 
         thisProduct.element.classList.toggle(classNames.menuProduct.wrapperActive);
+      });
+      
+      //  dodatkowa funkcja - zwijanie akordeonu po wciśnięciu ORDER
+      thisProduct.orderAccordionTrigger.addEventListener('click', function(){
+        const activeProduct = document.querySelector(select.all.menuProductsActive);
+        if (activeProduct && activeProduct != thisProduct.orderAccordionTrigger) {
+          activeProduct.classList.remove(classNames.menuProduct.wrapperActive);
+        }
+        thisProduct.orderAccordionTrigger.classList.toggle(classNames.menuProduct.wrapperActive);
       });
     }
 
@@ -215,7 +224,7 @@
     addToCart(){
       const thisProduct = this;
 
-      //app.cart.add(thisProduct);  //wywołujemy instancję klasy Cart (stworzoną w app.initCart) o odwołujemy się do jej metody, czyli add
+      //app.cart.add(thisProduct);  //wywołujemy instancję klasy Cart (stworzoną w app.initCart) i odwołujemy się do jej metody, czyli add
       app.cart.add(thisProduct.prepareCartProduct());
     }
 
@@ -366,7 +375,15 @@
       });
       thisCart.dom.form.addEventListener('submit', function(event){
         event.preventDefault();
-        thisCart.sendOrder();
+        if (thisCart.dom.phone.value.length >= 9 && thisCart.dom.phone.value.length <= 12) {
+          if (thisCart.dom.address.value.length >= 9) {
+            thisCart.sendOrder();
+            thisCart.cleanCart();        
+            thisCart.update();
+          }
+        } else {
+          alert('wprowadź poprawny nr telefonu (od 9 do 12 znaków) i adres (powyżej 9 znaków)');
+        } 
       });
     }
 
@@ -400,7 +417,6 @@
       } else {
         thisCart.totalPrice = 0;
       }
-      console.log(thisCart.totalNumber, thisCart.subtotalPrice, thisCart.totalPrice);
 
       thisCart.dom.totalNumber.innerHTML = thisCart.totalNumber;
       thisCart.dom.subtotalPrice.innerHTML = thisCart.subtotalPrice;
@@ -432,7 +448,7 @@
         deliveryFee: thisCart.dom.deliveryFee.innerHTML,
         products: [],
       };
-      
+
       for (let prod of thisCart.products) {
         payload.products.push(prod.getData());
       }
@@ -448,6 +464,18 @@
 
       fetch (url, options);
     }
+
+    cleanCart(){  //  dodatkowa funkcja - czyszczenie koszyka po wciśnięciu ORDER
+      const thisCart = this;
+
+      for (let removeProduct in thisCart.products) {
+        thisCart.dom.productList.remove();
+        thisCart.products.splice(removeProduct);
+      }
+
+      thisCart.dom.form.reset();
+    }
+
   }
 
   class CartProduct {
@@ -528,7 +556,7 @@
       };
 
       return productSummary;
-    }
+    }   
   }
   
   const app = {
@@ -551,12 +579,10 @@
           return rawResponse.json();
         })
         .then(function(parsedResponse){  //pokazuje skonwertowane dane
-          console.log('parsedResponse', parsedResponse);
           thisApp.data.products = parsedResponse;
           thisApp.initMenu();
         });
       
-      console.log('thisApp.data', JSON.stringify(thisApp.data));
     },
     initCart: function(){
       const thisApp = this;

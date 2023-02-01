@@ -10,7 +10,7 @@ const app = {
     thisApp.pages = document.querySelector(select.containerOf.pages).children;
     thisApp.navLinks = document.querySelectorAll(select.nav.links);
 
-    const idFromHash = window.location.hash.replace('#/', '');
+    const idFromHash = window.location.hash.replace('#/', ''); // slash jest potrzebny, bo domyślnie działa przeglądarka tak, że przenosi nas po kliknięciu na górę klikniętego elementu, czyli order lub booking. PreventDefault nie anuluje tego działania. Trzeba dodać np. '#/'
 
     let pageMatchingHash = thisApp.pages[0].id;
 
